@@ -33,7 +33,7 @@ app.add_middleware(
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("static", exist_ok=True)
 
-# Serve static files (like index.html, css, js)
+# Serve static files (like index.html, css, js, etc.)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -46,7 +46,7 @@ def remove_background(image: Image.Image, bg_color: str = "transparent") -> Imag
         output = remove(image)
         result = Image.open(io.BytesIO(output)).convert("RGBA")
     else:
-        # simple fallback (not perfect)
+        # Simple fallback (manual transparency)
         image = image.convert("RGBA")
         datas = image.getdata()
         newData = []
@@ -58,6 +58,7 @@ def remove_background(image: Image.Image, bg_color: str = "transparent") -> Imag
         result = Image.new("RGBA", image.size)
         result.putdata(newData)
 
+    # Optional background color fill
     if bg_color != "transparent":
         bg = Image.new("RGBA", result.size, bg_color)
         bg.paste(result, mask=result.split()[3])
@@ -78,7 +79,6 @@ async def remove_bg_api(
     """POST an image → return processed file info"""
     try:
         img = Image.open(io.BytesIO(await image.read()))
-
         processed = remove_background(img, background_color)
 
         filename = f"removed_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
@@ -112,6 +112,16 @@ async def serve_index():
         with open(index_path, "r", encoding="utf-8") as f:
             return f.read()
     return HTMLResponse("<h1>index.html not found in static folder</h1>", status_code=404)
+
+
+@app.get("/bg_remove", response_class=HTMLResponse)
+async def serve_bg_remove():
+    """Serve static/bg_remove.html"""
+    bg_path = os.path.join("static", "bg_remove.html")
+    if os.path.exists(bg_path):
+        with open(bg_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return HTMLResponse("<h1>bg_remove.html not found in static folder</h1>", status_code=404)
 
 
 # ------------------------------
