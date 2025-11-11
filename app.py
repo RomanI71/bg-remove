@@ -106,7 +106,6 @@ async def download_file(filename: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    """Serve static/index.html"""
     index_path = os.path.join("static", "index.html")
     if os.path.exists(index_path):
         with open(index_path, "r", encoding="utf-8") as f:
@@ -116,7 +115,6 @@ async def serve_index():
 
 @app.get("/bg_remove", response_class=HTMLResponse)
 async def serve_bg_remove():
-    """Serve static/bg_remove.html"""
     bg_path = os.path.join("static", "bg_remove.html")
     if os.path.exists(bg_path):
         with open(bg_path, "r", encoding="utf-8") as f:
