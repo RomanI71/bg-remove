@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 import io
@@ -28,8 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Make output folder
+# Folders
 os.makedirs("outputs", exist_ok=True)
+os.makedirs("static", exist_ok=True)
+
+# Serve static files (like index.html, css, js)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # ------------------------------
 # Helper: remove background
@@ -45,7 +51,6 @@ def remove_background(image: Image.Image, bg_color: str = "transparent") -> Imag
         datas = image.getdata()
         newData = []
         for item in datas:
-            # Remove white-ish background manually
             if item[0] > 200 and item[1] > 200 and item[2] > 200:
                 newData.append((255, 255, 255, 0))
             else:
@@ -53,7 +58,6 @@ def remove_background(image: Image.Image, bg_color: str = "transparent") -> Imag
         result = Image.new("RGBA", image.size)
         result.putdata(newData)
 
-    # Optional background color fill
     if bg_color != "transparent":
         bg = Image.new("RGBA", result.size, bg_color)
         bg.paste(result, mask=result.split()[3])
@@ -75,10 +79,8 @@ async def remove_bg_api(
     try:
         img = Image.open(io.BytesIO(await image.read()))
 
-        # Process
         processed = remove_background(img, background_color)
 
-        # Save result
         filename = f"removed_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
         output_path = os.path.join("outputs", filename)
         processed.save(output_path)
@@ -102,17 +104,20 @@ async def download_file(filename: str):
     return JSONResponse(status_code=404, content={"error": "File not found"})
 
 
-@app.get("/")
-async def root():
-    return {"message": "🪄 Welcome to AI Background Remover API", "endpoint": "/remove-bg"}
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    """Serve static/index.html"""
+    index_path = os.path.join("static", "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return HTMLResponse("<h1>index.html not found in static folder</h1>", status_code=404)
 
 
 # ------------------------------
 # Run server
 # ------------------------------
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 8000))
     print(f"🚀 Starting AI Background Remover on port {port} ...")
     uvicorn.run("app:app", host="0.0.0.0", port=port)
-
